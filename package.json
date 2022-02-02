@@ -1,0 +1,11 @@
+{
+  "name": "gitlab-get-issue-texts",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "@gitbeaker/node": "^35.1.0",
+    "dotenv": "^15.0.0"
+  }
+}
