@@ -2,6 +2,18 @@ import { Gitlab } from '@gitbeaker/node';
 import dotenv from 'dotenv';
 dotenv.config();
 
+const issueToMd = obj => [
+  `# ${issue.title}`,
+  `*Créé par \`${obj.author.username}\` le \`${obj.created_at}\`*`,
+  obj.description
+].join('\n\n');
+
+const replyToMd = obj => [
+  `*Par \`${obj.author.username}\` le \`${obj.created_at}\`*`,
+  obj.body
+].join('\n\n');
+
+
 const PROJECT_ID = process.argv[2] || process.env.PROJECT_ID;
 const ISSUE_ID = process.argv[3] || process.env.ISSUE_ID;
 
@@ -11,21 +23,25 @@ const api = new Gitlab({
 });
 
 const issue = await api.Issues.show(PROJECT_ID, ISSUE_ID);
-const comments = (await api.IssueNotes.all(PROJECT_ID, ISSUE_ID))
-  .filter(({ system }) => !system)
-  .sort((a, b) => a.created_at.localeCompare(b.created_at));
+const discussions = await api.IssueDiscussions.all(PROJECT_ID, ISSUE_ID);
 
-const output = `
-# ${issue.title}
+const output = [issueToMd(issue)];
 
-*Créé par \`${issue.author.username}\` le \`${issue.created_at}\`*
+discussions.forEach(discussion => {
+  const [first, ...replies] = discussion.notes;
 
-${issue.description}
-` + comments.map(comment => `----
+  output.push('----');
 
-*Par \`${comment.author.username}\` le \`${comment.created_at}\`*
+  output.push(replyToMd(first));
 
-${comment.body}
-`).join('\n');
+  if (replies.length) output.push('<div style="padding-left: 3em;">');
 
-process.stdout.write(output + '\n\n');
+  replies.forEach((reply) => {
+    output.push('----');
+    output.push(replyToMd(reply));
+  });
+
+  if (replies.length) output.push('</div>');
+});
+
+process.stdout.write(output.join('\n\n') + '\n\n');
